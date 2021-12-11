@@ -18,47 +18,24 @@ import org.fourthline.cling.android.AndroidUpnpService
 import org.fourthline.cling.model.meta.Device
 import org.fourthline.cling.registry.DefaultRegistryListener
 import org.fourthline.cling.registry.Registry
+import org.fourthline.cling.transport.Router
 
 class DlnaViewModel(context: Context) : ViewModel() {
-    val devices = mutableStateListOf<DeviceDisplay>()
+    val devices = mutableStateListOf<Device<*, *, *>>()
+    val router: Router?
+        get() = connection.router
+
     private var connection = UpnpServiceConnection(context)
 
-    class DeviceDisplay(private var device: Device<*, *, *>) {
-        val detailsMessage: String
-            get() {
-                val sb = StringBuilder()
-                if (device.isFullyHydrated) {
-                    sb.append(device.displayString)
-                    sb.append("\n\n")
-                    for (service in device.services) {
-                        sb.append(service.serviceType).append("\n")
-                    }
-                } else {
-                    sb.append("Device details are being discovered, please wait.")
-                }
-                return sb.toString()
-            }
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other == null || javaClass != other.javaClass) return false
-            val that = other as DeviceDisplay
-            return device == that.device
-        }
-
-        override fun hashCode() = device.hashCode()
-
-        override fun toString(): String =
-            if (device.details != null && device.details.friendlyName != null) device.details.friendlyName else device.displayString
-    }
-
     private class UpnpServiceConnection(
-        val context: Context
+        private val context: Context
     ) : ServiceConnection {
         private lateinit var upnpService: AndroidUpnpService
         private var connected = false
 
         var listener: DefaultRegistryListener? = null
+        val router: Router?
+            get() = if (connected) upnpService.get().router else null
 
         fun connect() {
             if (!connected) {
@@ -76,8 +53,9 @@ class DlnaViewModel(context: Context) : ViewModel() {
             }
         }
 
-        private fun search() {
+        fun search() {
             if (connected) {
+                upnpService.registry.removeAllRemoteDevices()
                 upnpService.controlPoint.search()
             }
         }
@@ -102,15 +80,15 @@ class DlnaViewModel(context: Context) : ViewModel() {
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun getDeviceData(): Flow<Pair<DeviceDisplay, Boolean>> =
+    private fun getDeviceData(): Flow<Pair<Device<*, *, *>, Boolean>> =
         callbackFlow {
             connection.listener = object : DefaultRegistryListener() {
                 override fun deviceAdded(registry: Registry, device: Device<*, *, *>) {
-                    trySend(DeviceDisplay(device) to true)
+                    trySend(device to true)
                 }
 
                 override fun deviceRemoved(registry: Registry, device: Device<*, *, *>) {
-                    trySend(DeviceDisplay(device) to false)
+                    trySend(device to false)
                 }
             }
 
@@ -119,10 +97,8 @@ class DlnaViewModel(context: Context) : ViewModel() {
             awaitClose { connection.disconnect() }
         }
 
-    override fun onCleared() {
-        connection.disconnect()
-        super.onCleared()
-    }
+    fun search() = connection.search()
+    fun disconnect() = connection.disconnect()
 
     init {
         viewModelScope.launch {

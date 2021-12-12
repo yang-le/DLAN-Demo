@@ -53,12 +53,14 @@ android {
     packagingOptions {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
+            excludes += '/META-INF/beans.xml'
         }
     }
 }
 
 dependencies {
     implementation 'org.fourthline.cling:cling-core:2.1.2'
+    implementation 'org.fourthline.cling:cling-support:2.1.2'
     implementation 'org.eclipse.jetty:jetty-server:8.1.22.v20160922'
     implementation 'org.eclipse.jetty:jetty-servlet:8.1.22.v20160922'
     implementation 'org.eclipse.jetty:jetty-client:8.1.22.v20160922'

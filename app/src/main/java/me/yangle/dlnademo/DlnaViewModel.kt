@@ -14,31 +14,32 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.server.handler.ResourceHandler
 import org.fourthline.cling.android.AndroidUpnpService
 import org.fourthline.cling.model.meta.Device
 import org.fourthline.cling.registry.DefaultRegistryListener
 import org.fourthline.cling.registry.Registry
-import org.fourthline.cling.transport.Router
 
 class DlnaViewModel(context: Context) : ViewModel() {
     val devices = mutableStateListOf<Device<*, *, *>>()
-    val router: Router?
-        get() = connection.router
+    val service: AndroidUpnpService
+        get() = connection.upnpService
 
     private var connection = UpnpServiceConnection(context)
+    private var server = Server(8080)
 
     private class UpnpServiceConnection(
         private val context: Context
     ) : ServiceConnection {
-        private lateinit var upnpService: AndroidUpnpService
+        lateinit var upnpService: AndroidUpnpService
+
         private var connected = false
+        private lateinit var listener: DefaultRegistryListener
 
-        var listener: DefaultRegistryListener? = null
-        val router: Router?
-            get() = if (connected) upnpService.get().router else null
-
-        fun connect() {
+        fun connect(listener: DefaultRegistryListener) {
             if (!connected) {
+                this.listener = listener
                 context.bindService(
                     Intent(context, DlnaUpnpService::class.java),
                     this,
@@ -53,27 +54,21 @@ class DlnaViewModel(context: Context) : ViewModel() {
             }
         }
 
-        fun search() {
-            if (connected) {
-                upnpService.registry.removeAllRemoteDevices()
-                upnpService.controlPoint.search()
-            }
-        }
-
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
             upnpService = service as AndroidUpnpService
             upnpService.registry.devices.forEach { device ->
-                listener?.deviceAdded(upnpService.registry, device)
+                listener.deviceAdded(upnpService.registry, device)
             }
             upnpService.registry.addListener(listener)
             connected = true
-            search()
+
+            upnpService.controlPoint.search()
         }
 
         override fun onServiceDisconnected(name: ComponentName) {
             upnpService.registry.removeListener(listener)
             upnpService.registry.devices.forEach { device ->
-                listener?.deviceRemoved(upnpService.registry, device)
+                listener.deviceRemoved(upnpService.registry, device)
             }
             connected = false
         }
@@ -82,7 +77,7 @@ class DlnaViewModel(context: Context) : ViewModel() {
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun getDeviceData(): Flow<Pair<Device<*, *, *>, Boolean>> =
         callbackFlow {
-            connection.listener = object : DefaultRegistryListener() {
+            connection.connect(object : DefaultRegistryListener() {
                 override fun deviceAdded(registry: Registry, device: Device<*, *, *>) {
                     trySend(device to true)
                 }
@@ -90,15 +85,27 @@ class DlnaViewModel(context: Context) : ViewModel() {
                 override fun deviceRemoved(registry: Registry, device: Device<*, *, *>) {
                     trySend(device to false)
                 }
-            }
-
-            connection.connect()
-
+            })
             awaitClose { connection.disconnect() }
         }
 
-    fun search() = connection.search()
-    fun disconnect() = connection.disconnect()
+    fun refresh() {
+        service.registry.removeAllRemoteDevices()
+        service.controlPoint.search()
+    }
+
+    fun startServer(path: String) {
+        if (server.isStarted) server.stop()
+        val staticResourceHandler = ResourceHandler()
+        staticResourceHandler.resourceBase = path
+        server.handler = staticResourceHandler
+        server.start()
+    }
+
+    fun destroy() {
+        if (server.isStarted) server.stop()
+        connection.disconnect()
+    }
 
     init {
         viewModelScope.launch {

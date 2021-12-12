@@ -6,7 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.res.stringResource
@@ -32,12 +32,12 @@ class MainActivity : ComponentActivity() {
                             title = { Text(stringResource(R.string.app_name)) },
                             actions = {
                                 IconButton(onClick = {
-                                    viewModel.search()
+                                    viewModel.refresh()
                                     scope.launch {
                                         scaffoldState.snackbarHostState.showSnackbar(searchingLAN)
                                     }
                                 }) {
-                                    Icon(Icons.Rounded.Search, stringResource(R.string.searchLAN))
+                                    Icon(Icons.Rounded.Refresh, stringResource(R.string.searchLAN))
                                 }
                                 DlnaDropdownButton(viewModel, scaffoldState.snackbarHostState)
                             }
@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
                     DlnaList(viewModel)
                 }
                 BackHandler {
-                    viewModel.disconnect()
+                    viewModel.destroy()
                     finish()
                 }
             }

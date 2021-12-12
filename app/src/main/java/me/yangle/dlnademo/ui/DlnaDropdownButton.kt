@@ -39,18 +39,18 @@ fun DlnaDropdownButton(
         val errorSwitchingRouter = stringResource(R.string.errorSwitchingRouter)
         val logger = Logger.getLogger("org.fourthline.cling")
         var debugState by remember { mutableStateOf(logger.level != Level.INFO) }
-        var routerState by remember { mutableStateOf(viewModel.router?.isEnabled ?: true) }
+        val router = viewModel.service.get().router
+        var routerState by remember { mutableStateOf(router.isEnabled) }
 
         DropdownMenuItem(
             onClick = {
-                viewModel.router?.let {
                     try {
-                        if (it.isEnabled) {
-                            it.disable()
+                        if (router.isEnabled) {
+                            router.disable()
                             routerState = false
                             scope.launch { snackbarHostState.showSnackbar(disablingRouter) }
                         } else {
-                            it.enable()
+                            router.enable()
                             routerState = true
                             scope.launch { snackbarHostState.showSnackbar(enablingRouter) }
                         }
@@ -60,8 +60,7 @@ fun DlnaDropdownButton(
                             duration = SnackbarDuration.Long
                         ) }
                     }
-                    viewModel.search()
-                }
+                    viewModel.refresh()
             }
         ) {
             Row(

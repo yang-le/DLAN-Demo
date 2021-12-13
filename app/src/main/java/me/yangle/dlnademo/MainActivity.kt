@@ -20,7 +20,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             DLNADemoTheme {
-                val viewModel = remember { DlnaViewModel(applicationContext) }
+                val viewModel = remember { DlnaViewModel(UpnpServiceConnection(applicationContext)) }
                 val scaffoldState = rememberScaffoldState()
                 val scope = rememberCoroutineScope()
                 val searchingLAN = stringResource(id = R.string.searchingLAN)
@@ -47,6 +47,7 @@ class MainActivity : ComponentActivity() {
                     DlnaList(viewModel)
                 }
                 BackHandler {
+                    AVTransportHelper.destroy()
                     viewModel.destroy()
                     finish()
                 }

@@ -1,4 +1,4 @@
-package me.yangle.dlnademo
+package me.yangle.dlnademo.upnp
 
 import android.util.Log
 import org.fourthline.cling.controlpoint.SubscriptionCallback
@@ -30,9 +30,10 @@ class LogSubscriptionCallback(currentService: Service<*, *>) : SubscriptionCallb
     }
 
     override fun eventReceived(subscription: GENASubscription<out Service<*, *>>?) {
-        Log.i(TAG, "Event: ${subscription?.currentSequence?.value}")
-        Log.i(TAG, "Status is: ${subscription?.currentValues?.get("Status")}")
-        Log.i(TAG, "LastChange is: ${subscription?.currentValues?.get("LastChange")}")
+        Log.i(TAG, subscription.toString())
+        subscription?.currentValues?.forEach {
+            Log.i(TAG, "${it.key}: ${it.value}")
+        }
     }
 
     override fun eventsMissed(

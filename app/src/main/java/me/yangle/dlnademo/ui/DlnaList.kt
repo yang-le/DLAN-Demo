@@ -13,11 +13,14 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import me.yangle.dlnademo.AVTransportHelper
 import me.yangle.dlnademo.DlnaViewModel
-import me.yangle.dlnademo.LogSubscriptionCallback
+import me.yangle.dlnademo.upnp.AVTransportHelper
+import me.yangle.dlnademo.upnp.ConnectionManagerHelper
+import me.yangle.dlnademo.upnp.Layer3ForwardingHelper
+import me.yangle.dlnademo.upnp.LogSubscriptionCallback
 import org.fourthline.cling.model.meta.Device
 import org.fourthline.cling.model.meta.Service
+import org.fourthline.cling.support.model.PlayMode
 
 
 enum class ShowState {
@@ -49,6 +52,8 @@ fun DlnaList(viewModel: DlnaViewModel) {
                     ListItem(Modifier.clickable {
                         currentDevice = it
                         showState = ShowState.SERVICE
+                    }, secondaryText = {
+                        Text(it.type.displayString)
                     }) {
                         Text(it.details.friendlyName)
                     }
@@ -77,6 +82,34 @@ fun DlnaList(viewModel: DlnaViewModel) {
                                 }
                                 "Play" -> {
                                     viewModel.service.controlPoint.execute(AVTransportHelper.play(service))
+                                }
+                                "GetDeviceCapabilities" -> {
+                                    viewModel.service.controlPoint.execute(
+                                        AVTransportHelper.getDeviceCapabilities(
+                                            service
+                                        )
+                                    )
+                                }
+                                "SetPlayMode" -> {
+                                    viewModel.service.controlPoint.execute(
+                                        AVTransportHelper.setPlayMode(
+                                            service, PlayMode.DIRECT_1
+                                        )
+                                    )
+                                }
+                                "GetProtocolInfo" -> {
+                                    viewModel.service.controlPoint.execute(
+                                        ConnectionManagerHelper.getProtocolInfo(
+                                            service
+                                        )
+                                    )
+                                }
+                                "GetDefaultConnectionService" -> {
+                                    viewModel.service.controlPoint.execute(
+                                        Layer3ForwardingHelper.getDefaultConnectionService(
+                                            service
+                                        )
+                                    )
                                 }
                                 else -> {
 //                                    getContentLauncher.launch("*/*")

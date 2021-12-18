@@ -45,7 +45,9 @@ object AVTransportHelper {
 
     fun play(service: Service<*, *>) = object : Play(service) {
         override fun failure(
-            invocation: ActionInvocation<out Service<*, *>>?, operation: UpnpResponse?, defaultMsg: String?
+            invocation: ActionInvocation<out Service<*, *>>?,
+            operation: UpnpResponse?,
+            defaultMsg: String?
         ) {
             defaultMsg?.let {
                 Log.e(TAG, "Play: $it")
@@ -53,17 +55,25 @@ object AVTransportHelper {
         }
     }
 
-    fun setAVTransportURI(service: Service<*, *>, url: String) = object : SetAVTransportURI(service, url) {
-        override fun failure(
-            invocation: ActionInvocation<out Service<*, *>>?, operation: UpnpResponse?, defaultMsg: String?
-        ) {
-            defaultMsg?.let {
-                Log.e(TAG, "SetAVTransportURI: $it")
+    fun setAVTransportURI(service: Service<*, *>, url: String, metadata: String? = null) =
+        object : SetAVTransportURI(service, url, metadata) {
+            override fun failure(
+                invocation: ActionInvocation<out Service<*, *>>?,
+                operation: UpnpResponse?,
+                defaultMsg: String?
+            ) {
+                defaultMsg?.let {
+                    Log.e(TAG, "SetAVTransportURI: $it")
+                }
             }
         }
-    }
 
-    fun setAVTransportURI(service: Service<*, *>, context: Context, uri: Uri): SetAVTransportURI {
+    fun setAVTransportURI(
+        service: Service<*, *>,
+        context: Context,
+        uri: Uri,
+        metadata: String? = null
+    ): SetAVTransportURI {
         val file = File(context.cacheDir, "dlna_demo_temp")
         context.contentResolver.openInputStream(uri)?.let {
             copyFile(it, file.outputStream())
@@ -71,10 +81,11 @@ object AVTransportHelper {
 
         startServer(file.path)
 
-        val url = "http://${getActiveIpv4(context)?.address?.hostAddress}:${server.connectors[0].port}"
+        val url =
+            "http://${getActiveIpv4(context)?.address?.hostAddress}:${server.connectors[0].port}"
         Log.i(TAG, "start server at $url")
 
-        return setAVTransportURI(service, url)
+        return setAVTransportURI(service, url, metadata)
     }
 
     fun getDeviceCapabilities(service: Service<*, *>) = object : GetDeviceCapabilities(service) {

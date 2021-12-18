@@ -1,5 +1,11 @@
 package me.yangle.dlnademo.ui
 
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -7,19 +13,23 @@ import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.ListItem
-import androidx.compose.material.Text
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import com.pedro.rtspserver.RtspServerDisplay
 import me.yangle.dlnademo.DlnaViewModel
+import me.yangle.dlnademo.MirrorService
 import me.yangle.dlnademo.upnp.AVTransportHelper
 import me.yangle.dlnademo.upnp.ConnectionManagerHelper
 import me.yangle.dlnademo.upnp.Layer3ForwardingHelper
 import me.yangle.dlnademo.upnp.LogSubscriptionCallback
 import org.fourthline.cling.model.meta.Device
 import org.fourthline.cling.model.meta.Service
+import org.fourthline.cling.model.types.ServiceType
 import org.fourthline.cling.support.model.PlayMode
 
 
@@ -37,24 +47,42 @@ fun DlnaList(viewModel: DlnaViewModel) {
     var currentService: Service<*, *>? by remember { mutableStateOf(null) }
 
     val context = LocalContext.current
-    val getContentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
-            currentService?.let { service ->
-                viewModel.service.controlPoint.execute(AVTransportHelper.setAVTransportURI(service, context, it))
+    val getContentLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let {
+                currentService?.let { service ->
+                    viewModel.service.controlPoint.execute(
+                        AVTransportHelper.setAVTransportURI(
+                            service,
+                            context,
+                            it,
+                            ""
+                        )
+                    )
+                }
             }
         }
-    }
 
     LazyColumn {
         when (showState) {
             ShowState.DEVICE -> {
                 items(viewModel.devices) {
+                    val avTransport = it.findService(
+                        ServiceType(
+                            "schemas-upnp-org",
+                            "AVTransport"
+                        )
+                    )
                     ListItem(Modifier.clickable {
                         currentDevice = it
                         showState = ShowState.SERVICE
                     }, secondaryText = {
                         Text(it.type.displayString)
-                    }) {
+                    }, trailing = if (avTransport != null) {
+                        {
+                            ProjectionButton(context, avTransport, viewModel)
+                        }
+                    } else null) {
                         Text(it.details.friendlyName)
                     }
                 }
@@ -81,7 +109,11 @@ fun DlnaList(viewModel: DlnaViewModel) {
                                     getContentLauncher.launch("*/*")
                                 }
                                 "Play" -> {
-                                    viewModel.service.controlPoint.execute(AVTransportHelper.play(service))
+                                    viewModel.service.controlPoint.execute(
+                                        AVTransportHelper.play(
+                                            service
+                                        )
+                                    )
                                 }
                                 "GetDeviceCapabilities" -> {
                                     viewModel.service.controlPoint.execute(
@@ -137,5 +169,59 @@ fun DlnaList(viewModel: DlnaViewModel) {
         ShowState.DEVICE -> {
             // NOOP
         }
+    }
+}
+
+@Composable
+private fun ProjectionButton(
+    context: Context,
+    avTransport: Service<*, *>,
+    viewModel: DlnaViewModel
+) {
+    lateinit var rtspServer: RtspServerDisplay
+    val requestPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) {
+        if (it) rtspServer.prepareInternalAudio()
+    }
+    val getProjection = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (it.resultCode == ComponentActivity.RESULT_OK) {
+            val service = Intent(context, MirrorService::class.java)
+            service.putExtra("code", it.resultCode)
+            service.putExtra("data", it.data)
+            ContextCompat.startForegroundService(context, service)
+            requestPermission.launch(android.Manifest.permission.RECORD_AUDIO)
+            viewModel.service.controlPoint.execute(
+                AVTransportHelper.play(avTransport)
+            )
+        }
+    }
+
+    IconButton(onClick = {
+        context.bindService(
+            Intent(context, MirrorService::class.java),
+            object : ServiceConnection {
+                override fun onServiceConnected(
+                    name: ComponentName?,
+                    service: IBinder?
+                ) {
+                    rtspServer = (service as MirrorService.Binder).server
+                    viewModel.service.controlPoint.execute(
+                        AVTransportHelper.setAVTransportURI(
+                            avTransport,
+                            rtspServer.getEndPointConnection()
+                        )
+                    )
+                    getProjection.launch(rtspServer.sendIntent())
+                }
+
+                override fun onServiceDisconnected(name: ComponentName?) {}
+            },
+            Context.BIND_AUTO_CREATE
+        )
+    }) {
+        Icon(Icons.Rounded.Cast, "projection")
     }
 }

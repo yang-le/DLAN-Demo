@@ -8,8 +8,6 @@ import org.fourthline.cling.model.message.UpnpResponse
 import org.fourthline.cling.model.meta.Service
 
 class LogSubscriptionCallback(currentService: Service<*, *>) : SubscriptionCallback(currentService) {
-    private val TAG = this::class.simpleName
-
     override fun failed(
         subscription: GENASubscription<out Service<*, *>>?,
         responseStatus: UpnpResponse?,
@@ -40,5 +38,9 @@ class LogSubscriptionCallback(currentService: Service<*, *>) : SubscriptionCallb
         subscription: GENASubscription<out Service<*, *>>?, numberOfMissedEvents: Int
     ) {
         Log.w(TAG, "Missed events: $numberOfMissedEvents")
+    }
+
+    companion object {
+        private val TAG = this::class.java.simpleName
     }
 }

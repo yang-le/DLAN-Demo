@@ -23,10 +23,8 @@ import androidx.core.content.ContextCompat
 import com.pedro.rtspserver.RtspServerDisplay
 import me.yangle.dlnademo.DlnaViewModel
 import me.yangle.dlnademo.MirrorService
-import me.yangle.dlnademo.upnp.AVTransportHelper
-import me.yangle.dlnademo.upnp.ConnectionManagerHelper
-import me.yangle.dlnademo.upnp.Layer3ForwardingHelper
-import me.yangle.dlnademo.upnp.LogSubscriptionCallback
+import me.yangle.dlnademo.getCursor
+import me.yangle.dlnademo.upnp.*
 import org.fourthline.cling.model.meta.Device
 import org.fourthline.cling.model.meta.Service
 import org.fourthline.cling.model.types.ServiceType
@@ -51,12 +49,15 @@ fun DlnaList(viewModel: DlnaViewModel) {
         rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             uri?.let {
                 currentService?.let { service ->
+                    val metadata = getCursor(context, uri).use {
+                        DIDLLiteHelper.metaData(it)
+                    }
                     viewModel.service.controlPoint.execute(
                         AVTransportHelper.setAVTransportURI(
                             service,
                             context,
                             it,
-                            ""
+                            metadata
                         )
                     )
                 }
@@ -144,7 +145,7 @@ fun DlnaList(viewModel: DlnaViewModel) {
                                     )
                                 }
                                 else -> {
-//                                    getContentLauncher.launch("*/*")
+                                    getContentLauncher.launch("*/*")
                                 }
                             }
                         }) {

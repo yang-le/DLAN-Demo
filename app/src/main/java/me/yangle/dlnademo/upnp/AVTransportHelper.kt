@@ -5,7 +5,7 @@ import android.net.ConnectivityManager
 import android.net.LinkAddress
 import android.net.Uri
 import android.util.Log
-import me.yangle.dlnademo.copyFile
+import me.yangle.dlnademo.getPath
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.handler.ResourceHandler
 import org.eclipse.jetty.server.nio.SelectChannelConnector
@@ -18,7 +18,6 @@ import org.fourthline.cling.support.avtransport.callback.SetAVTransportURI
 import org.fourthline.cling.support.avtransport.callback.SetPlayMode
 import org.fourthline.cling.support.model.DeviceCapabilities
 import org.fourthline.cling.support.model.PlayMode
-import java.io.File
 import java.net.Inet4Address
 
 object AVTransportHelper {
@@ -39,7 +38,8 @@ object AVTransportHelper {
     }
 
     private fun getActiveIpv4(context: Context): LinkAddress? {
-        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val connectivityManager =
+            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         return connectivityManager.getLinkProperties(connectivityManager.activeNetwork)?.linkAddresses?.find { it.address is Inet4Address }
     }
 
@@ -74,12 +74,9 @@ object AVTransportHelper {
         uri: Uri,
         metadata: String? = null
     ): SetAVTransportURI {
-        val file = File(context.cacheDir, "dlna_demo_temp")
-        context.contentResolver.openInputStream(uri)?.let {
-            copyFile(it, file.outputStream())
+        getPath(context, uri)?.let {
+            startServer(it)
         }
-
-        startServer(file.path)
 
         val url =
             "http://${getActiveIpv4(context)?.address?.hostAddress}:${server.connectors[0].port}"
@@ -90,29 +87,37 @@ object AVTransportHelper {
 
     fun getDeviceCapabilities(service: Service<*, *>) = object : GetDeviceCapabilities(service) {
         override fun failure(
-            invocation: ActionInvocation<out Service<*, *>>?, operation: UpnpResponse?, defaultMsg: String?
+            invocation: ActionInvocation<out Service<*, *>>?,
+            operation: UpnpResponse?,
+            defaultMsg: String?
         ) {
             defaultMsg?.let {
                 Log.e(TAG, "GetDeviceCapabilities: $it")
             }
         }
 
-        override fun received(actionInvocation: ActionInvocation<out Service<*, *>>?, caps: DeviceCapabilities?) {
+        override fun received(
+            actionInvocation: ActionInvocation<out Service<*, *>>?,
+            caps: DeviceCapabilities?
+        ) {
             Log.i(TAG, "PlayMedia: ${caps?.playMediaString}")
             Log.i(TAG, "RecMedia: ${caps?.recMediaString}")
             Log.i(TAG, "RecQualityModes: ${caps?.recQualityModesString}")
         }
     }
 
-    fun setPlayMode(service: Service<*, *>, playMode: PlayMode) = object : SetPlayMode(service, playMode) {
-        override fun failure(
-            invocation: ActionInvocation<out Service<*, *>>?, operation: UpnpResponse?, defaultMsg: String?
-        ) {
-            defaultMsg?.let {
-                Log.e(TAG, "SetPlayMode: $playMode $it")
+    fun setPlayMode(service: Service<*, *>, playMode: PlayMode) =
+        object : SetPlayMode(service, playMode) {
+            override fun failure(
+                invocation: ActionInvocation<out Service<*, *>>?,
+                operation: UpnpResponse?,
+                defaultMsg: String?
+            ) {
+                defaultMsg?.let {
+                    Log.e(TAG, "SetPlayMode: $playMode $it")
+                }
             }
         }
-    }
 
     fun destroy() {
         if (server.isStarted) server.stop()

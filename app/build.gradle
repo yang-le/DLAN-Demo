@@ -68,6 +68,9 @@ dependencies {
     implementation 'com.github.pedroSG94:RTSP-Server:1.1.6'
     implementation 'com.github.pedroSG94.rtmp-rtsp-stream-client-java:rtplibrary:2.1.4'
 
+    // for DIDL-Lite
+    implementation 'com.github.cybergarage.cybergarage-upnp:std:2.1.5'
+
     implementation 'androidx.core:core-ktx:1.7.0'
     implementation 'androidx.appcompat:appcompat:1.4.0'
     implementation 'com.google.android.material:material:1.4.0'

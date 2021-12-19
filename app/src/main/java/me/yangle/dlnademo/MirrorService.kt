@@ -22,16 +22,11 @@ class MirrorService : Service(), ConnectCheckerRtsp {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForegroundNotification()
+        rtspServer.prepareVideo(1280, 720, 2048 * 2048)
+        if (intent?.getBooleanExtra("audio", false) == true)
+            rtspServer.prepareInternalAudio()
 
-        intent?.let {
-            val resultCode = it.getIntExtra("code", -1)
-            val resultData = it.getParcelableExtra("data") as Intent?
-            rtspServer.setIntentResult(resultCode, resultData)
-
-            rtspServer.prepareVideo(1280, 720, 2048 * 2048)
-            rtspServer.startStream()
-        }
-
+        rtspServer.startStream()
         return super.onStartCommand(intent, flags, startId)
     }
 

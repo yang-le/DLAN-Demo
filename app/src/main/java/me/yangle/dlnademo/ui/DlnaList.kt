@@ -23,8 +23,10 @@ import androidx.core.content.ContextCompat
 import com.pedro.rtspserver.RtspServerDisplay
 import me.yangle.dlnademo.DlnaViewModel
 import me.yangle.dlnademo.MirrorService
-import me.yangle.dlnademo.getCursor
-import me.yangle.dlnademo.upnp.*
+import me.yangle.dlnademo.upnp.AVTransportHelper
+import me.yangle.dlnademo.upnp.ConnectionManagerHelper
+import me.yangle.dlnademo.upnp.Layer3ForwardingHelper
+import me.yangle.dlnademo.upnp.LogSubscriptionCallback
 import org.fourthline.cling.model.meta.Device
 import org.fourthline.cling.model.meta.Service
 import org.fourthline.cling.model.types.ServiceType
@@ -49,15 +51,11 @@ fun DlnaList(viewModel: DlnaViewModel) {
         rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             uri?.let {
                 currentService?.let { service ->
-                    val metadata = getCursor(context, uri).use {
-                        DIDLLiteHelper.metaData(it)
-                    }
                     viewModel.service.controlPoint.execute(
                         AVTransportHelper.setAVTransportURI(
                             service,
                             context,
-                            it,
-                            metadata
+                            it
                         )
                     )
                 }
@@ -183,20 +181,26 @@ private fun ProjectionButton(
     val requestPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) {
-        if (it) rtspServer.prepareInternalAudio()
+        val service = Intent(context, MirrorService::class.java)
+        service.putExtra("audio", it)
+
+        ContextCompat.startForegroundService(context, service)
+        viewModel.service.controlPoint.execute(
+            AVTransportHelper.setAVTransportURI(
+                avTransport,
+                rtspServer.getEndPointConnection()
+            )
+        )
+        viewModel.service.controlPoint.execute(
+            AVTransportHelper.play(avTransport)
+        )
     }
     val getProjection = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
         if (it.resultCode == ComponentActivity.RESULT_OK) {
-            val service = Intent(context, MirrorService::class.java)
-            service.putExtra("code", it.resultCode)
-            service.putExtra("data", it.data)
-            ContextCompat.startForegroundService(context, service)
+            rtspServer.setIntentResult(it.resultCode, it.data)
             requestPermission.launch(android.Manifest.permission.RECORD_AUDIO)
-            viewModel.service.controlPoint.execute(
-                AVTransportHelper.play(avTransport)
-            )
         }
     }
 
@@ -209,12 +213,6 @@ private fun ProjectionButton(
                     service: IBinder?
                 ) {
                     rtspServer = (service as MirrorService.Binder).server
-                    viewModel.service.controlPoint.execute(
-                        AVTransportHelper.setAVTransportURI(
-                            avTransport,
-                            rtspServer.getEndPointConnection()
-                        )
-                    )
                     getProjection.launch(rtspServer.sendIntent())
                 }
 

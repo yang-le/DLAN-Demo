@@ -31,7 +31,7 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".DlnaUpnpService" />
+        <service android:name="org.fourthline.cling.android.AndroidUpnpServiceImpl" />
         <service
                 android:name=".MirrorService"
                 android:enabled="true"

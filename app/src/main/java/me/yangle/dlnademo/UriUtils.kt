@@ -96,7 +96,7 @@ fun getPath(context: Context, uri: Uri): String? {
     }
 
     if (path == null || path == "") {
-        val file = File(context.cacheDir, "uri_utils_temp")
+        val file = File(context.cacheDir, "uri_utils_temp.dat")
         context.contentResolver.openInputStream(uri)?.let {
             copyFile(it, file.outputStream())
         }

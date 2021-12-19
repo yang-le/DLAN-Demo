@@ -1,200 +1,226 @@
 package me.yangle.dlnademo.upnp
 
 import android.database.Cursor
-import android.provider.MediaStore.MediaColumns.*
+import android.provider.MediaStore.Audio.AudioColumns
+import android.provider.MediaStore.Images.ImageColumns
+import android.provider.MediaStore.MediaColumns
+import android.provider.MediaStore.Video.VideoColumns
 import me.yangle.dlnademo.getIntColumn
 import me.yangle.dlnademo.getStringColumn
-import org.cybergarage.upnp.std.av.server.`object`.DIDLLite
-import org.cybergarage.upnp.std.av.server.`object`.item.ItemNode
-import org.cybergarage.upnp.std.av.server.`object`.item.ResourceNode
-import org.cybergarage.xml.Attribute
-import org.cybergarage.xml.AttributeList
+import org.fourthline.cling.support.contentdirectory.DIDLParser
+import org.fourthline.cling.support.model.DIDLContent
+import org.fourthline.cling.support.model.DIDLObject
+import org.fourthline.cling.support.model.Res
+import org.fourthline.cling.support.model.item.*
 import java.time.Instant
 
 object DIDLLiteHelper {
-    const val MOVIE = "object.item.movie"
-    const val VIDEO = "object.item.video"
-    const val AUDIO = "object.item.audio"
-    const val MUSIC = "object.item.music"
-    const val IMAGE = "object.item.image"
-    const val PHOTO = "object.item.photo"
-
-    private fun findStringColunm(
+    private fun findStringColumn(
         cursor: Cursor?,
         columns: List<String>,
-        default: String = ItemNode.UNKNOWN
+        default: String = ""
     ) =
         columns.map { getStringColumn(cursor, it) }.find { it != null && it != "" }
             ?: default
 
-    private fun findIntColunm(cursor: Cursor?, columns: List<String>, default: Int = 0) =
+    private fun findIntColumn(cursor: Cursor?, columns: List<String>, default: Int = 0) =
         columns.map { getIntColumn(cursor, it) }.find { it != null } ?: default
 
-    private fun getId(cursor: Cursor?) = findStringColunm(
+    private fun hasColumn(cursor: Cursor?, columns: List<String>) =
+        columns.map { cursor?.getColumnIndex(it) }.find { it != null && it != -1 } != null
+
+    private fun getId(cursor: Cursor?) = findStringColumn(
         cursor, listOf(
-            DOCUMENT_ID,
-            ORIGINAL_DOCUMENT_ID,
-            INSTANCE_ID,
-            CD_TRACK_NUMBER
+            MediaColumns.DOCUMENT_ID,
+            MediaColumns.ORIGINAL_DOCUMENT_ID,
+            MediaColumns.INSTANCE_ID,
+            MediaColumns.CD_TRACK_NUMBER
         ), "0"
     )
 
-    private fun getTile(cursor: Cursor?) = findStringColunm(
-        cursor, listOf(TITLE)
+    private fun getTile(cursor: Cursor?) = findStringColumn(
+        cursor, listOf(MediaColumns.TITLE)
     )
 
-    private fun getCreator(cursor: Cursor?) = findStringColunm(
+    private fun getAlbum(cursor: Cursor?) = findStringColumn(
+        cursor, listOf(MediaColumns.ALBUM)
+    )
+
+    private fun getAlbumArtist(cursor: Cursor?) = findStringColumn(
         cursor, listOf(
-            ARTIST,
-            ALBUM_ARTIST,
-            COMPOSER,
-            AUTHOR,
-            WRITER,
-            COMPILATION
+            MediaColumns.ARTIST,
+            MediaColumns.ALBUM_ARTIST
         )
     )
 
-    private fun getDate(cursor: Cursor?) = findIntColunm(
+    private fun getCreator(cursor: Cursor?) = findStringColumn(
         cursor, listOf(
-            YEAR,
-            DATE_TAKEN,
-            DATE_ADDED,
-            DATE_MODIFIED,
+            MediaColumns.AUTHOR,
+            MediaColumns.WRITER,
+            MediaColumns.COMPILATION,
+            MediaColumns.ARTIST,
+            MediaColumns.ALBUM_ARTIST,
+            MediaColumns.COMPOSER
         )
     )
 
-    private fun getMime(cursor: Cursor?) = findStringColunm(
-        cursor, listOf(MIME_TYPE)
-    )
-
-    private fun getResolution(cursor: Cursor?) = findStringColunm(
-        cursor, listOf(RESOLUTION)
-    )
-
-    private fun getDuration(cursor: Cursor?) = findIntColunm(
-        cursor, listOf(DURATION)
-    )
-
-    private fun itemNode(
-        id: String,
-        parentID: String,
-        restricted: Int,
-        title: String,
-        creator: String,
-        uPnPClass: String,
-        date: Long,
-        url: String,
-        protocolInfo: String,
-        resolution: String,
-        duration: Int
-    ) = ItemNode().apply {
-        setID(id)
-        setParentID(parentID)
-        setRestricted(restricted)
-        setTitle(title)
-        setCreator(creator)
-        setUPnPClass(uPnPClass)
-        setDate(date)
-        setResource(url, protocolInfo, AttributeList().apply {
-            add(Attribute(ResourceNode.RESOLUTION, resolution))
-            add(Attribute("duration", duration.toString()))
-        })
-    }
-
-    private fun metaData(
-        itemNode: ItemNode
-    ) = DIDLLite().apply {
-        addContentNode(itemNode)
-    }.toString()
-
-    fun metaData(
-        id: String = "0",
-        parentID: String = "0",
-        restricted: Int = 1,
-        title: String = ItemNode.UNKNOWN,
-        creator: String = ItemNode.UNKNOWN,
-        uPnPClass: String = ItemNode.UNKNOWN,
-        date: Long = Instant.now().toEpochMilli(),
-        url: String = ItemNode.UNKNOWN,
-        protocolInfo: String = ItemNode.UNKNOWN,
-        resolution: String = ItemNode.UNKNOWN,
-        duration: Int
-    ) = metaData(
-        itemNode(
-            id,
-            parentID,
-            restricted,
-            title,
-            creator,
-            uPnPClass,
-            date,
-            url,
-            protocolInfo,
-            resolution,
-            duration
+    private fun getDate(cursor: Cursor?) = findIntColumn(
+        cursor, listOf(
+            MediaColumns.DATE_TAKEN,
+            MediaColumns.DATE_ADDED,
+            MediaColumns.DATE_MODIFIED,
         )
     )
 
-    fun metaData(
-        id: String = "0",
-        parentID: String = "0",
-        restricted: Boolean,
-        title: String = ItemNode.UNKNOWN,
-        creator: String = ItemNode.UNKNOWN,
-        uPnPClass: String = ItemNode.UNKNOWN,
-        date: Long = Instant.now().toEpochMilli(),
-        url: String = ItemNode.UNKNOWN,
-        protocolInfo: String = ItemNode.UNKNOWN,
-        resolution: String = "",
-        duration: Int
-    ) = metaData(
-        id,
-        parentID,
-        if (restricted) 1 else 0,
-        title,
-        creator,
-        uPnPClass,
-        date,
-        url,
-        protocolInfo,
-        resolution,
-        duration
+//    private fun getYear(cursor: Cursor?) = findStringColumn(
+//        cursor, listOf(MediaColumns.YEAR)
+//    )
+
+    private fun getMime(cursor: Cursor?) = findStringColumn(
+        cursor, listOf(MediaColumns.MIME_TYPE)
     )
 
-    fun metaData(
-        id: String = "0",
-        parentID: String = "0",
-        restricted: Int = 1,
-        title: String = ItemNode.UNKNOWN,
-        creator: String = ItemNode.UNKNOWN,
-        uPnPClass: String = ItemNode.UNKNOWN,
-        date: String,
-        url: String = ItemNode.UNKNOWN,
-        protocolInfo: String = ItemNode.UNKNOWN,
-        resolution: String = "",
-        duration: Int
-    ) = metaData(
-        itemNode(
-            id,
-            parentID,
-            restricted,
-            title,
-            creator,
-            uPnPClass,
-            0,
-            url,
-            protocolInfo,
-            resolution,
-            duration
-        ).apply { setDate(date) }
+//    private fun getResolution(cursor: Cursor?) = findStringColumn(
+//        cursor, listOf(MediaColumns.RESOLUTION)
+//    )
+
+    private fun getDuration(cursor: Cursor?) = findIntColumn(
+        cursor, listOf(MediaColumns.DURATION)
     )
 
-    fun metaData(cursor: Cursor?) = metaData(
-        id = getId(cursor),
-        title = getTile(cursor),
-        creator = getCreator(cursor),
-        date = getDate(cursor).toLong(),
-        resolution = getResolution(cursor),
-        duration = getDuration(cursor)
+    private fun getBitrate(cursor: Cursor?) = findIntColumn(
+        cursor, listOf(MediaColumns.BITRATE)
     )
+
+    private fun isAudio(cursor: Cursor?) = hasColumn(
+        cursor, listOf(
+            AudioColumns.IS_ALARM,
+            AudioColumns.IS_AUDIOBOOK,
+            AudioColumns.IS_MUSIC,
+            AudioColumns.IS_NOTIFICATION,
+            AudioColumns.IS_PODCAST,
+            AudioColumns.IS_RINGTONE
+        )
+    )
+
+    private fun isMusic(cursor: Cursor?) = findIntColumn(
+        cursor, listOf(AudioColumns.IS_MUSIC)
+    ) == 1
+
+    private fun isPodcast(cursor: Cursor?) = findIntColumn(
+        cursor, listOf(AudioColumns.IS_PODCAST)
+    ) == 1
+
+    private fun isAudioBook(cursor: Cursor?) = findIntColumn(
+        cursor, listOf(AudioColumns.IS_AUDIOBOOK)
+    ) == 1
+
+    private fun isImage(cursor: Cursor?) = hasColumn(
+        cursor, listOf(ImageColumns.SCENE_CAPTURE_TYPE)
+    )
+
+    private fun isPhoto(cursor: Cursor?) = findStringColumn(
+        cursor, listOf(
+            ImageColumns.EXPOSURE_TIME,
+            ImageColumns.F_NUMBER
+        )
+    ).isNotEmpty() || findIntColumn(
+        cursor, listOf(ImageColumns.ISO)
+    ) != 0
+
+    private fun isVideo(cursor: Cursor?) = hasColumn(
+        cursor, listOf(
+            VideoColumns.COLOR_RANGE,
+            VideoColumns.COLOR_STANDARD,
+            VideoColumns.COLOR_TRANSFER
+        )
+    )
+
+    private fun isMovie(cursor: Cursor?) = findStringColumn(
+        cursor, listOf(VideoColumns.LANGUAGE)
+    ).isNotEmpty()
+
+//    private fun isMusicVideo(cursor: Cursor?) = findStringColumn(
+//        cursor, listOf(MediaColumns.ALBUM)
+//    ).isNotEmpty() && isVideo(cursor)
+
+    private fun isYoutube(cursor: Cursor?) = findStringColumn(
+        cursor, listOf(VideoColumns.CATEGORY)
+    ).isNotEmpty()
+
+    fun getMetadata(cursor: Cursor?, url: String): String =
+        DIDLParser().generate(
+            DIDLContent().addObject(
+                when {
+                    isYoutube(cursor) -> {
+                        VideoBroadcast(getId(cursor), "0", getTile(cursor), getCreator(cursor))
+                    }
+//            isMusicVideo(cursor) -> {
+//                MusicVideoClip(getId(cursor), "0", getTile(cursor), getCreator(cursor))
+//            }
+                    isMovie(cursor) -> {
+                        Movie(getId(cursor), "0", getTile(cursor), getCreator(cursor))
+                    }
+                    isVideo(cursor) -> {
+                        VideoItem(getId(cursor), "0", getTile(cursor), getCreator(cursor))
+                    }
+                    isPhoto(cursor) -> {
+                        Photo(
+                            getId(cursor),
+                            "0",
+                            getTile(cursor),
+                            getCreator(cursor),
+                            getAlbum(cursor)
+                        )
+                    }
+                    isImage(cursor) -> {
+                        ImageItem(getId(cursor), "0", getTile(cursor), getCreator(cursor))
+                    }
+                    isAudioBook(cursor) -> {
+                        AudioBook(
+                            getId(cursor),
+                            "0",
+                            getTile(cursor),
+                            getCreator(cursor),
+                            null,
+                            null,
+                            Instant.ofEpochMilli(getDate(cursor).toLong()).toString()
+                        )
+                    }
+                    isPodcast(cursor) -> {
+                        AudioBroadcast(getId(cursor), "0", getTile(cursor), getCreator(cursor))
+                    }
+                    isMusic(cursor) -> {
+                        MusicTrack(
+                            getId(cursor),
+                            "0",
+                            getTile(cursor),
+                            getCreator(cursor),
+                            getAlbum(cursor),
+                            getAlbumArtist(cursor)
+                        )
+                    }
+                    isAudio(cursor) -> {
+                        AudioItem(getId(cursor), "0", getTile(cursor), getCreator(cursor))
+                    }
+                    else -> {
+                        Item(
+                            getId(cursor),
+                            "0",
+                            getTile(cursor),
+                            getCreator(cursor),
+                            DIDLObject.Class("object.item")
+                        )
+                    }
+                }.addResource(
+                    Res(
+                        getMime(cursor),
+                        0,
+                        getDuration(cursor).toString(),
+                        getBitrate(cursor).toLong(),
+                        url
+                    )
+                )
+            )
+        )
 }

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import org.fourthline.cling.android.AndroidUpnpService
+import org.fourthline.cling.android.AndroidUpnpServiceImpl
 import org.fourthline.cling.registry.DefaultRegistryListener
 
 class UpnpServiceConnection(
@@ -21,7 +22,7 @@ class UpnpServiceConnection(
         if (!connected) {
             this.listener = listener
             context.bindService(
-                Intent(context, DlnaUpnpService::class.java),
+                Intent(context, AndroidUpnpServiceImpl::class.java),
                 this,
                 Context.BIND_AUTO_CREATE
             )

@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.LinkAddress
 import android.net.Uri
 import android.util.Log
+import me.yangle.dlnademo.getCursor
 import me.yangle.dlnademo.getPath
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.server.handler.ResourceHandler
@@ -19,6 +20,7 @@ import org.fourthline.cling.support.avtransport.callback.SetPlayMode
 import org.fourthline.cling.support.model.DeviceCapabilities
 import org.fourthline.cling.support.model.PlayMode
 import java.net.Inet4Address
+import java.net.URLEncoder
 
 object AVTransportHelper {
     private val TAG = this::class.simpleName
@@ -71,16 +73,25 @@ object AVTransportHelper {
     fun setAVTransportURI(
         service: Service<*, *>,
         context: Context,
-        uri: Uri,
-        metadata: String? = null
+        uri: Uri
     ): SetAVTransportURI {
-        getPath(context, uri)?.let {
-            startServer(it)
-        }
+        val path = getPath(context, uri)
 
+        startServer(path?.dropLastWhile { it != '/' } ?: "")
         val url =
-            "http://${getActiveIpv4(context)?.address?.hostAddress}:${server.connectors[0].port}"
+            "http://${getActiveIpv4(context)?.address?.hostAddress}:${server.connectors[0].port}/${
+                URLEncoder.encode(
+                    path?.split(
+                        '/'
+                    )?.last(), "utf-8"
+                )
+            }"
         Log.i(TAG, "start server at $url")
+
+        val metadata = getCursor(context, uri).use {
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>${DIDLLiteHelper.getMetadata(it, url)}"
+        }
+        Log.i(TAG, "metadata: $metadata")
 
         return setAVTransportURI(service, url, metadata)
     }

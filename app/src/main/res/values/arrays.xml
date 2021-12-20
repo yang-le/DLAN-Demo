@@ -1,0 +1,31 @@
+<resources>
+
+    <string-array name="resolution">
+        <item>2400 * 1080</item>
+        <item>1280 * 720</item>
+        <item>800 * 480</item>
+    </string-array>
+
+    <string-array name="bitrate_entry">
+        <item>42Mbps</item>
+        <item>32Mbps</item>
+        <item>24Mbps</item>
+        <item>16Mbps</item>
+        <item>8Mbps</item>
+        <item>6Mbps</item>
+        <item>4Mbps</item>
+        <item>1Mbps</item>
+    </string-array>
+
+    <string-array name="bitrate_value">
+        <item>42</item>
+        <item>32</item>
+        <item>24</item>
+        <item>16</item>
+        <item>8</item>
+        <item>6</item>
+        <item>4</item>
+        <item>1</item>
+    </string-array>
+
+</resources>

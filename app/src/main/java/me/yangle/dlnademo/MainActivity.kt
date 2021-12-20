@@ -21,7 +21,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             DLNADemoTheme {
-                val viewModel = remember { DlnaViewModel(UpnpServiceConnection(applicationContext)) }
+                val viewModel =
+                    remember { DlnaViewModel(UpnpServiceConnection(applicationContext)) }
                 val scaffoldState = rememberScaffoldState()
                 val scope = rememberCoroutineScope()
                 val searchingLAN = stringResource(id = R.string.searchingLAN)

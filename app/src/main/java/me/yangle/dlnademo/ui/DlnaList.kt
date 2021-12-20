@@ -47,20 +47,26 @@ fun DlnaList(viewModel: DlnaViewModel) {
     var currentService: Service<*, *>? by remember { mutableStateOf(null) }
 
     val context = LocalContext.current
-    val getContentLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-            uri?.let {
-                currentService?.let { service ->
-                    viewModel.service.controlPoint.execute(
-                        AVTransportHelper.setAVTransportURI(
-                            service,
-                            context,
-                            it
-                        )
+    val getContentLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            currentService?.let { service ->
+                viewModel.service.controlPoint.execute(
+                    AVTransportHelper.setAVTransportURI(
+                        service,
+                        context,
+                        it
                     )
-                }
+                )
             }
         }
+    }
+    val requestPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) {
+        getContentLauncher.launch("*/*")
+    }
 
     LazyColumn {
         when (showState) {
@@ -105,7 +111,7 @@ fun DlnaList(viewModel: DlnaViewModel) {
                         ListItem(Modifier.clickable {
                             when (it.name) {
                                 "SetAVTransportURI" -> {
-                                    getContentLauncher.launch("*/*")
+                                    requestPermission.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
                                 }
                                 "Play" -> {
                                     viewModel.service.controlPoint.execute(
@@ -143,7 +149,7 @@ fun DlnaList(viewModel: DlnaViewModel) {
                                     )
                                 }
                                 else -> {
-                                    getContentLauncher.launch("*/*")
+                                    requestPermission.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
                                 }
                             }
                         }) {

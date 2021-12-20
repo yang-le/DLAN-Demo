@@ -1,0 +1,39 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="Screen Recording">
+
+        <ListPreference
+                app:key="resolution"
+                app:title="Resolution"
+                app:entries="@array/resolution"
+                app:entryValues="@array/resolution"
+                app:defaultValue="1280 * 720"
+                app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+                app:key="bitrate"
+                app:title="Bitrate"
+                app:entries="@array/bitrate_entry"
+                app:entryValues="@array/bitrate_value"
+                app:defaultValue="4"
+                app:useSimpleSummaryProvider="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Logging">
+
+        <SwitchPreference
+                app:key="debug"
+                app:title="Toggle debug logging" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="About">
+
+        <Preference
+                app:key="oss"
+                app:title="Open source software" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

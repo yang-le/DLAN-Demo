@@ -5,30 +5,13 @@ import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.content.Intent
 import android.os.IBinder
 import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.preference.PreferenceManager
 import com.pedro.rtsp.utils.ConnectCheckerRtsp
 import com.pedro.rtspserver.RtspServerDisplay
 
 class MirrorService : Service(), ConnectCheckerRtsp {
     private lateinit var rtspServer: RtspServerDisplay
-
-    override fun onCreate() {
-        super.onCreate()
-        rtspServer = RtspServerDisplay(this, true, this, 8081)
-    }
-
-    override fun onBind(intent: Intent?): IBinder {
-        return Binder(rtspServer)
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForegroundNotification()
-        rtspServer.prepareVideo(1280, 720, 2048 * 2048)
-        if (intent?.getBooleanExtra("audio", false) == true)
-            rtspServer.prepareInternalAudio()
-
-        rtspServer.startStream()
-        return super.onStartCommand(intent, flags, startId)
-    }
 
     private fun startForegroundNotification() {
         val pendingIntent: PendingIntent =
@@ -54,6 +37,45 @@ class MirrorService : Service(), ConnectCheckerRtsp {
             .build()
 
         startForeground(ONGOING_NOTIFICATION_ID, notification)
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        rtspServer = RtspServerDisplay(this, true, this, 8081)
+    }
+
+    override fun onBind(intent: Intent?): IBinder {
+        return Binder(rtspServer)
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        startForegroundNotification()
+
+        val preference = PreferenceManager.getDefaultSharedPreferences(this)
+        val size = (preference.getString("resolution", null) ?: "1280x720").split('x')
+        val bitrate = preference.getString("bitrate", null) ?: "4"
+        Log.i(TAG, "start ${size[0].toInt()} x ${size[1].toInt()} @ ${bitrate.toInt()} Mbps")
+
+        rtspServer.setIntentResult(
+            ComponentActivity.RESULT_OK,
+            intent?.getParcelableExtra<Intent>("data")
+        )
+        rtspServer.prepareVideo(size[0].toInt(), size[1].toInt(), bitrate.toInt() * 1024 * 1024)
+        if (intent?.getBooleanExtra("audio", false) == true)
+            rtspServer.prepareInternalAudio()
+
+        rtspServer.startStream()
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        stopSelf()
+        return super.onUnbind(intent)
+    }
+
+    override fun onDestroy() {
+        rtspServer.stopStream()
+        super.onDestroy()
     }
 
     override fun onAuthErrorRtsp() {
@@ -89,7 +111,7 @@ class MirrorService : Service(), ConnectCheckerRtsp {
     class Binder(val server: RtspServerDisplay) : android.os.Binder()
 
     companion object {
-        private val TAG = this::class.java.simpleName
+        private val TAG = MirrorService::class.java.simpleName
         private const val CHANNEL_DEFAULT_IMPORTANCE = "channel_default"
         private const val ONGOING_NOTIFICATION_ID = 1
     }

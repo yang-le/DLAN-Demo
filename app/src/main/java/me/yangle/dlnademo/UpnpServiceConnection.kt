@@ -32,6 +32,7 @@ class UpnpServiceConnection(
     fun disconnect() {
         if (connected) {
             context.unbindService(this)
+            connected = false
         }
     }
 

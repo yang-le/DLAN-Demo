@@ -7,7 +7,7 @@
                 app:title="Resolution"
                 app:entries="@array/resolution"
                 app:entryValues="@array/resolution"
-                app:defaultValue="1280 * 720"
+                app:defaultValue="1280x720"
                 app:useSimpleSummaryProvider="true" />
 
         <ListPreference

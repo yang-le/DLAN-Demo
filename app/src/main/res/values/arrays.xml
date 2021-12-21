@@ -1,9 +1,9 @@
 <resources>
 
     <string-array name="resolution">
-        <item>2400 * 1080</item>
-        <item>1280 * 720</item>
-        <item>800 * 480</item>
+        <item>2400x1080</item>
+        <item>1280x720</item>
+        <item>800x480</item>
     </string-array>
 
     <string-array name="bitrate_entry">

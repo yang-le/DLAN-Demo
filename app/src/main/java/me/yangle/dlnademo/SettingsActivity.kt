@@ -2,6 +2,7 @@ package me.yangle.dlnademo
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.commit
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SwitchPreference
 import java.util.logging.Level
@@ -13,10 +14,9 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.settings_activity)
         if (savedInstanceState == null) {
-            supportFragmentManager
-                .beginTransaction()
-                .replace(R.id.settings, SettingsFragment())
-                .commit()
+            supportFragmentManager.commit {
+                replace(R.id.settings, SettingsFragment())
+            }
         }
     }
 

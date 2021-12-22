@@ -41,7 +41,10 @@ class MirrorService : Service(), ConnectCheckerRtsp {
 
     override fun onCreate() {
         super.onCreate()
-        rtspServer = RtspServerDisplay(this, true, this, 8081)
+        val preference = PreferenceManager.getDefaultSharedPreferences(this)
+        val opengl = preference.getBoolean("opengl", false)
+        val port = preference.getString("port", null) ?: "8081"
+        rtspServer = RtspServerDisplay(this, opengl, this, port.toInt())
     }
 
     override fun onBind(intent: Intent?): IBinder {
@@ -58,7 +61,7 @@ class MirrorService : Service(), ConnectCheckerRtsp {
 
         rtspServer.setIntentResult(
             ComponentActivity.RESULT_OK,
-            intent?.getParcelableExtra<Intent>("data")
+            intent?.getParcelableExtra("data")
         )
         rtspServer.prepareVideo(size[0].toInt(), size[1].toInt(), bitrate.toInt() * 1024 * 1024)
         if (intent?.getBooleanExtra("audio", false) == true)

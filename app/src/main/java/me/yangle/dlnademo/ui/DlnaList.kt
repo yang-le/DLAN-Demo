@@ -12,6 +12,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
@@ -21,6 +22,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import me.yangle.dlnademo.DlnaViewModel
 import me.yangle.dlnademo.MirrorService
 import me.yangle.dlnademo.upnp.AVTransportHelper
@@ -68,31 +71,41 @@ fun DlnaList(viewModel: DlnaViewModel) {
         getContentLauncher.launch("*/*")
     }
 
-    LazyColumn {
-        when (showState) {
-            ShowState.DEVICE -> {
-                items(viewModel.devices) {
-                    val avTransport = it.findService(
-                        ServiceType(
-                            "schemas-upnp-org",
-                            "AVTransport"
+    when (showState) {
+        ShowState.DEVICE -> {
+            SwipeRefresh(
+                state = rememberSwipeRefreshState(viewModel.refreshing),
+                onRefresh = {
+                    viewModel.refresh()
+                }
+            ) {
+                LazyColumn(Modifier.fillMaxSize()) {
+                    items(viewModel.devices) {
+                        val avTransport = it.findService(
+                            ServiceType(
+                                "schemas-upnp-org",
+                                "AVTransport"
+                            )
                         )
-                    )
-                    ListItem(Modifier.clickable {
-                        currentDevice = it
-                        showState = ShowState.SERVICE
-                    }, secondaryText = {
-                        Text(it.type.displayString)
-                    }, trailing = if (avTransport != null) {
-                        {
-                            ProjectionButton(context, avTransport, viewModel)
+                        ListItem(
+                            Modifier.clickable {
+                                currentDevice = it
+                                showState = ShowState.SERVICE
+                        }, secondaryText = {
+                            Text(it.type.displayString)
+                        }, trailing = if (avTransport != null) {
+                            {
+                                ProjectionButton(context, avTransport, viewModel)
+                            }
+                        } else null) {
+                            Text(it.details.friendlyName)
                         }
-                    } else null) {
-                        Text(it.details.friendlyName)
                     }
                 }
             }
-            ShowState.SERVICE -> {
+        }
+        ShowState.SERVICE -> {
+            LazyColumn {
                 currentDevice?.let { device ->
                     items(device.services) {
                         ListItem(Modifier.clickable {
@@ -105,7 +118,9 @@ fun DlnaList(viewModel: DlnaViewModel) {
                     }
                 }
             }
-            ShowState.ACTION -> {
+        }
+        ShowState.ACTION -> {
+            LazyColumn {
                 currentService?.let { service ->
                     items(service.actions) {
                         ListItem(Modifier.clickable {
@@ -147,9 +162,6 @@ fun DlnaList(viewModel: DlnaViewModel) {
                                             service
                                         )
                                     )
-                                }
-                                else -> {
-                                    requestPermission.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
                                 }
                             }
                         }) {

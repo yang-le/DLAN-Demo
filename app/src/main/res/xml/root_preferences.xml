@@ -18,6 +18,16 @@
                 app:defaultValue="4"
                 app:useSimpleSummaryProvider="true" />
 
+        <SwitchPreference
+                app:key="opengl"
+                app:title="Use OpenGL" />
+
+        <EditTextPreference
+                app:key="port"
+                app:title="Port"
+                app:defaultValue="8081"
+                app:useSimpleSummaryProvider="true" />
+
     </PreferenceCategory>
 
     <PreferenceCategory app:title="Logging">

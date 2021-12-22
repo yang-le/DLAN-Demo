@@ -1,8 +1,10 @@
 package me.yangle.dlnademo
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.commit
+import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SwitchPreference
 import java.util.logging.Level
@@ -27,8 +29,13 @@ class SettingsActivity : AppCompatActivity() {
             setPreferencesFromResource(R.xml.root_preferences, rootKey)
             val debugPreference: SwitchPreference? = findPreference("debug")
             debugPreference?.setDefaultValue(logger.level == Level.FINEST)
-            debugPreference?.setOnPreferenceChangeListener { preference, newValue ->
+            debugPreference?.setOnPreferenceChangeListener { _, newValue ->
                 logger.level = if (newValue as Boolean) Level.FINEST else Level.INFO
+                true
+            }
+            val oss: Preference? = findPreference("oss")
+            oss?.setOnPreferenceClickListener {
+                startActivity(Intent(context, AboutActivity::class.java))
                 true
             }
         }

@@ -1,6 +1,9 @@
 package me.yangle.dlnademo
 
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -16,6 +19,7 @@ import org.fourthline.cling.registry.Registry
 
 class DlnaViewModel(private val connection: UpnpServiceConnection) : ViewModel() {
     val devices = mutableStateListOf<Device<*, *, *>>()
+    var refreshing by mutableStateOf(true)
     val service: AndroidUpnpService
         get() = connection.upnpService
 
@@ -46,6 +50,7 @@ class DlnaViewModel(private val connection: UpnpServiceConnection) : ViewModel()
         viewModelScope.launch {
             getDeviceData().collect { (device, add) ->
                 if (add) devices.add(device) else devices.remove(device)
+                refreshing = devices.isEmpty()
             }
         }
     }

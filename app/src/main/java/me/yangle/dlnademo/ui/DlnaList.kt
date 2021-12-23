@@ -1,12 +1,5 @@
 package me.yangle.dlnademo.ui
 
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
-import android.media.projection.MediaProjectionManager
-import android.os.IBinder
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,17 +8,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.ListItem
+import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import me.yangle.dlnademo.DlnaViewModel
-import me.yangle.dlnademo.MirrorService
 import me.yangle.dlnademo.upnp.AVTransportHelper
 import me.yangle.dlnademo.upnp.ConnectionManagerHelper
 import me.yangle.dlnademo.upnp.Layer3ForwardingHelper
@@ -91,13 +82,13 @@ fun DlnaList(viewModel: DlnaViewModel) {
                             Modifier.clickable {
                                 currentDevice = it
                                 showState = ShowState.SERVICE
-                        }, secondaryText = {
-                            Text(it.type.displayString)
-                        }, trailing = if (avTransport != null) {
-                            {
-                                ProjectionButton(context, avTransport, viewModel)
-                            }
-                        } else null) {
+                            }, secondaryText = {
+                                Text(it.type.displayString)
+                            }, trailing = if (avTransport != null) {
+                                {
+                                    ProjectionButton(context, avTransport, viewModel)
+                                }
+                            } else null) {
                             Text(it.details.friendlyName)
                         }
                     }
@@ -186,76 +177,5 @@ fun DlnaList(viewModel: DlnaViewModel) {
         ShowState.DEVICE -> {
             // NOOP
         }
-    }
-}
-
-@Composable
-private fun ProjectionButton(
-    context: Context,
-    avTransport: Service<*, *>,
-    viewModel: DlnaViewModel
-) {
-    val service = Intent(context, MirrorService::class.java)
-    val connection = remember {
-        object : ServiceConnection {
-            var connected = false
-            override fun onServiceConnected(
-                name: ComponentName?,
-                service: IBinder?
-            ) {
-                connected = true
-
-                val rtspServer = (service as MirrorService.Binder).server
-                viewModel.service.controlPoint.execute(
-                    AVTransportHelper.setAVTransportURI(
-                        avTransport,
-                        rtspServer.getEndPointConnection()
-                    )
-                )
-                viewModel.service.controlPoint.execute(
-                    AVTransportHelper.play(avTransport)
-                )
-            }
-
-            override fun onServiceDisconnected(name: ComponentName?) {
-                connected = false
-            }
-        }
-    }
-
-    val requestPermission = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) {
-        service.putExtra("audio", it)
-        ContextCompat.startForegroundService(context, service)
-
-        context.bindService(
-            Intent(context, MirrorService::class.java),
-            connection,
-            Context.BIND_AUTO_CREATE
-        )
-    }
-
-    val getProjection = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) {
-        if (it.resultCode == ComponentActivity.RESULT_OK) {
-            service.putExtra("data", it.data)
-            requestPermission.launch(android.Manifest.permission.RECORD_AUDIO)
-        }
-    }
-
-    val projectionManager =
-        context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-
-    IconButton(onClick = {
-        if (connection.connected) {
-            context.unbindService(connection)
-            connection.connected = false
-        } else {
-            getProjection.launch(projectionManager.createScreenCaptureIntent())
-        }
-    }) {
-        Icon(Icons.Rounded.Cast, "projection")
     }
 }
